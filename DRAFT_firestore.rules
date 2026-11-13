@@ -1,0 +1,375 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Global Hardened Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isVerified() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'belalmohamed1292007@gmail.com'
+      );
+    }
+
+    function isValidStore(data) {
+      return data.keys().hasAll(['ownerId', 'storeName', 'businessType', 'currency', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['ownerId', 'storeName', 'businessType', 'currency', 'taxNumber', 'commercialRegister', 'createdAt', 'updatedAt']) &&
+        isValidId(data.ownerId) &&
+        data.ownerId == request.auth.uid &&
+        data.storeName is string && data.storeName.size() >= 1 && data.storeName.size() <= 120 &&
+        data.businessType in ['supermarket', 'pharmacy', 'retail'] &&
+        data.currency is string && data.currency.size() >= 3 && data.currency.size() <= 6 &&
+        (!('taxNumber' in data) || (data.taxNumber is string && data.taxNumber.size() <= 30)) &&
+        (!('commercialRegister' in data) || (data.commercialRegister is string && data.commercialRegister.size() <= 30)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isStoreOwner(storeId) {
+      return isVerified() &&
+        exists(/databases/$(database)/documents/stores/$(storeId)) &&
+        get(/databases/$(database)/documents/stores/$(storeId)).data.ownerId == request.auth.uid;
+    }
+
+    function isValidProduct(data, storeId) {
+      return data.keys().hasAll(['ownerId', 'storeId', 'code', 'name', 'barcode', 'salePrice', 'purchasePrice', 'status', 'isDeleted', 'revision', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['ownerId', 'storeId', 'code', 'sku', 'name', 'barcode', 'category', 'salePrice', 'purchasePrice', 'wholesalePrice', 'minSalePrice', 'totalStock', 'status', 'isDeleted', 'revision', 'createdAt', 'updatedAt']) &&
+        isValidId(data.ownerId) &&
+        data.ownerId == request.auth.uid &&
+        data.storeId == storeId &&
+        data.code is string && data.code.size() >= 1 && data.code.size() <= 64 &&
+        (!('sku' in data) || (data.sku is string && data.sku.size() <= 64)) &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 160 &&
+        data.barcode is string && data.barcode.size() >= 1 && data.barcode.size() <= 64 &&
+        (!('category' in data) || (data.category is string && data.category.size() <= 80)) &&
+        data.salePrice is number && data.salePrice >= 0 &&
+        data.purchasePrice is number && data.purchasePrice >= 0 &&
+        (!('wholesalePrice' in data) || (data.wholesalePrice is number && data.wholesalePrice >= 0)) &&
+        (!('minSalePrice' in data) || (data.minSalePrice is number && data.minSalePrice >= 0)) &&
+        (!('totalStock' in data) || data.totalStock is number) &&
+        data.status in ['active', 'inactive', 'archived'] &&
+        data.isDeleted is bool &&
+        data.revision is number && data.revision >= 1 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidSale(data, storeId) {
+      return data.keys().hasAll(['ownerId', 'storeId', 'invoiceNumber', 'docType', 'status', 'grandTotal', 'paidAmount', 'remainingAmount', 'idempotencyKey', 'revision', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['ownerId', 'storeId', 'invoiceNumber', 'docType', 'status', 'customerId', 'grandTotal', 'paidAmount', 'remainingAmount', 'idempotencyKey', 'revision', 'createdAt', 'updatedAt']) &&
+        isValidId(data.ownerId) &&
+        data.ownerId == request.auth.uid &&
+        data.storeId == storeId &&
+        data.invoiceNumber is string && data.invoiceNumber.size() >= 1 && data.invoiceNumber.size() <= 64 &&
+        data.docType in ['invoice', 'quotation', 'sales_order'] &&
+        data.status in ['completed', 'held', 'cancelled', 'converted'] &&
+        (!('customerId' in data) || (data.customerId is string && data.customerId.size() <= 128)) &&
+        data.grandTotal is number && data.grandTotal >= 0 &&
+        data.paidAmount is number && data.paidAmount >= 0 &&
+        data.remainingAmount is number && data.remainingAmount >= 0 &&
+        data.idempotencyKey is string && data.idempotencyKey.size() >= 8 && data.idempotencyKey.size() <= 128 &&
+        data.revision is number && data.revision >= 1 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidCustomer(data, storeId) {
+      return data.keys().hasAll(['ownerId', 'storeId', 'name', 'balance', 'creditLimit', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['ownerId', 'storeId', 'name', 'phone', 'balance', 'creditLimit', 'loyaltyPoints', 'createdAt', 'updatedAt']) &&
+        isValidId(data.ownerId) &&
+        data.ownerId == request.auth.uid &&
+        data.storeId == storeId &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 30)) &&
+        data.balance is number &&
+        data.creditLimit is number && data.creditLimit >= 0 &&
+        (!('loyaltyPoints' in data) || (data.loyaltyPoints is number && data.loyaltyPoints >= 0)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidSupplier(data, storeId) {
+      return data.keys().hasAll(['ownerId', 'storeId', 'name', 'balance', 'rating', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['ownerId', 'storeId', 'name', 'phone', 'taxNumber', 'balance', 'rating', 'createdAt', 'updatedAt']) &&
+        isValidId(data.ownerId) &&
+        data.ownerId == request.auth.uid &&
+        data.storeId == storeId &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 30)) &&
+        (!('taxNumber' in data) || (data.taxNumber is string && data.taxNumber.size() <= 30)) &&
+        data.balance is number &&
+        data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidPurchase(data, storeId) {
+      return data.keys().hasAll(['ownerId', 'storeId', 'purchaseNumber', 'docType', 'status', 'supplierId', 'grandTotal', 'paidAmount', 'remainingAmount', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['ownerId', 'storeId', 'purchaseNumber', 'docType', 'status', 'supplierId', 'grandTotal', 'paidAmount', 'remainingAmount', 'createdAt', 'updatedAt']) &&
+        isValidId(data.ownerId) &&
+        data.ownerId == request.auth.uid &&
+        data.storeId == storeId &&
+        data.purchaseNumber is string && data.purchaseNumber.size() >= 1 && data.purchaseNumber.size() <= 64 &&
+        data.docType in ['invoice', 'po', 'quote'] &&
+        data.status in ['received', 'partial', 'ordered', 'cancelled'] &&
+        isValidId(data.supplierId) &&
+        data.grandTotal is number && data.grandTotal >= 0 &&
+        data.paidAmount is number && data.paidAmount >= 0 &&
+        data.remainingAmount is number && data.remainingAmount >= 0 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidExpense(data, storeId) {
+      return data.keys().hasAll(['ownerId', 'storeId', 'category', 'amount', 'accountId', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['ownerId', 'storeId', 'category', 'amount', 'accountId', 'createdAt', 'updatedAt']) &&
+        isValidId(data.ownerId) &&
+        data.ownerId == request.auth.uid &&
+        data.storeId == storeId &&
+        data.category is string && data.category.size() >= 1 && data.category.size() <= 60 &&
+        data.amount is number && data.amount > 0 &&
+        isValidId(data.accountId) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidShift(data, storeId) {
+      return data.keys().hasAll(['ownerId', 'storeId', 'cashierId', 'status', 'openingCash', 'expectedCash', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['ownerId', 'storeId', 'cashierId', 'status', 'openingCash', 'expectedCash', 'actualCash', 'variance', 'createdAt', 'updatedAt']) &&
+        isValidId(data.ownerId) &&
+        data.ownerId == request.auth.uid &&
+        data.storeId == storeId &&
+        isValidId(data.cashierId) &&
+        data.status in ['open', 'closed'] &&
+        data.openingCash is number && data.openingCash >= 0 &&
+        data.expectedCash is number &&
+        (!('actualCash' in data) || data.actualCash is number) &&
+        (!('variance' in data) || data.variance is number) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidPrivateProfile(data, userId) {
+      return data.keys().hasAll(['uid', 'email', 'displayName', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'displayName', 'createdAt', 'updatedAt']) &&
+        isValidId(data.uid) &&
+        data.uid == userId &&
+        data.email is string && data.email.size() <= 160 &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // Connection probe document
+    match /test/connection {
+      allow get: if isSignedIn();
+    }
+
+    // PII-isolated private user profiles
+    match /users/{userId}/private/{docId} {
+      allow get: if isValidId(userId) && isValidId(docId) && (isAdmin() || (isVerified() && request.auth.uid == userId));
+      allow create: if isValidId(userId) && isValidId(docId) && isVerified() && request.auth.uid == userId &&
+        isValidPrivateProfile(incoming(), userId) && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId) && isValidId(docId) && isVerified() && request.auth.uid == userId &&
+        isValidPrivateProfile(incoming(), userId) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'email', 'updatedAt']);
+    }
+
+    // Admin registry (read-only from client)
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && isVerified() && request.auth.uid == adminId;
+    }
+
+    // Store root
+    match /stores/{storeId} {
+      allow get: if isValidId(storeId) && (isAdmin() || (isVerified() && existing().ownerId == request.auth.uid));
+      allow list: if isVerified() && resource.data.ownerId == request.auth.uid;
+      allow create: if isValidId(storeId) && isVerified() &&
+        isValidStore(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(storeId) && isVerified() &&
+        isValidStore(incoming()) &&
+        (isAdmin() || existing().ownerId == request.auth.uid) &&
+        incoming().ownerId == existing().ownerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['storeName', 'businessType', 'currency', 'taxNumber', 'commercialRegister', 'updatedAt']);
+
+      // Products subcollection
+      match /products/{productId} {
+        allow get: if isValidId(productId) && (isAdmin() || isStoreOwner(storeId));
+        allow list: if isVerified() && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(productId) && isStoreOwner(storeId) &&
+          isValidProduct(incoming(), storeId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time;
+        allow update: if isValidId(productId) && isVerified() &&
+          isValidProduct(incoming(), storeId) &&
+          (isAdmin() || (isStoreOwner(storeId) && existing().ownerId == request.auth.uid)) &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().storeId == existing().storeId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (
+            isAdmin() ||
+            (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'category', 'salePrice', 'purchasePrice', 'wholesalePrice', 'minSalePrice', 'totalStock', 'status', 'isDeleted', 'revision', 'updatedAt']))
+          );
+      }
+
+      // Sales subcollection (with terminal state lock)
+      match /sales/{saleId} {
+        allow get: if isValidId(saleId) && (isAdmin() || isStoreOwner(storeId));
+        allow list: if isVerified() && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(saleId) && isStoreOwner(storeId) &&
+          isValidSale(incoming(), storeId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time;
+        allow update: if isValidId(saleId) && isVerified() &&
+          isValidSale(incoming(), storeId) &&
+          (isAdmin() || (isStoreOwner(storeId) && existing().ownerId == request.auth.uid && !(existing().status in ['completed', 'cancelled']))) &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().storeId == existing().storeId &&
+          incoming().idempotencyKey == existing().idempotencyKey &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (
+            isAdmin() ||
+            (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'paidAmount', 'remainingAmount', 'grandTotal', 'revision', 'updatedAt']))
+          );
+      }
+
+      // Customers subcollection
+      match /customers/{customerId} {
+        allow get: if isValidId(customerId) && (isAdmin() || isStoreOwner(storeId));
+        allow list: if isVerified() && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(customerId) && isStoreOwner(storeId) &&
+          isValidCustomer(incoming(), storeId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time;
+        allow update: if isValidId(customerId) && isVerified() &&
+          isValidCustomer(incoming(), storeId) &&
+          (isAdmin() || (isStoreOwner(storeId) && existing().ownerId == request.auth.uid)) &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().storeId == existing().storeId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (
+            isAdmin() ||
+            (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'balance', 'creditLimit', 'loyaltyPoints', 'updatedAt']))
+          );
+      }
+
+      // Suppliers subcollection
+      match /suppliers/{supplierId} {
+        allow get: if isValidId(supplierId) && (isAdmin() || isStoreOwner(storeId));
+        allow list: if isVerified() && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(supplierId) && isStoreOwner(storeId) &&
+          isValidSupplier(incoming(), storeId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time;
+        allow update: if isValidId(supplierId) && isVerified() &&
+          isValidSupplier(incoming(), storeId) &&
+          (isAdmin() || (isStoreOwner(storeId) && existing().ownerId == request.auth.uid)) &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().storeId == existing().storeId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (
+            isAdmin() ||
+            (incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'taxNumber', 'balance', 'rating', 'updatedAt']))
+          );
+      }
+
+      // Purchases subcollection
+      match /purchases/{purchaseId} {
+        allow get: if isValidId(purchaseId) && (isAdmin() || isStoreOwner(storeId));
+        allow list: if isVerified() && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(purchaseId) && isStoreOwner(storeId) &&
+          isValidPurchase(incoming(), storeId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time;
+        allow update: if isValidId(purchaseId) && isVerified() &&
+          isValidPurchase(incoming(), storeId) &&
+          (isAdmin() || (isStoreOwner(storeId) && existing().ownerId == request.auth.uid && existing().status != 'cancelled')) &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().storeId == existing().storeId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (
+            isAdmin() ||
+            (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'paidAmount', 'remainingAmount', 'updatedAt']))
+          );
+      }
+
+      // Expenses subcollection
+      match /expenses/{expenseId} {
+        allow get: if isValidId(expenseId) && (isAdmin() || isStoreOwner(storeId));
+        allow list: if isVerified() && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(expenseId) && isStoreOwner(storeId) &&
+          isValidExpense(incoming(), storeId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time;
+        allow update: if isValidId(expenseId) && isVerified() &&
+          isValidExpense(incoming(), storeId) &&
+          (isAdmin() || (isStoreOwner(storeId) && existing().ownerId == request.auth.uid)) &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().storeId == existing().storeId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (
+            isAdmin() ||
+            (incoming().diff(existing()).affectedKeys().hasOnly(['category', 'amount', 'accountId', 'updatedAt']))
+          );
+      }
+
+      // Shifts subcollection (terminal lock when closed)
+      match /shifts/{shiftId} {
+        allow get: if isValidId(shiftId) && (isAdmin() || isStoreOwner(storeId));
+        allow list: if isVerified() && resource.data.ownerId == request.auth.uid;
+        allow create: if isValidId(shiftId) && isStoreOwner(storeId) &&
+          isValidShift(incoming(), storeId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time;
+        allow update: if isValidId(shiftId) && isVerified() &&
+          isValidShift(incoming(), storeId) &&
+          (isAdmin() || (isStoreOwner(storeId) && existing().ownerId == request.auth.uid && existing().status != 'closed')) &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().storeId == existing().storeId &&
+          incoming().cashierId == existing().cashierId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (
+            isAdmin() ||
+            (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'expectedCash', 'actualCash', 'variance', 'updatedAt']))
+          );
+      }
+    }
+  }
+}

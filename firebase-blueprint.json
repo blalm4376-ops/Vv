@@ -1,0 +1,204 @@
+{
+  "entities": {
+    "Store": {
+      "title": "Store",
+      "description": "Store profile, business type, and Egypt tax settings",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "storeName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "businessType": { "type": "string", "enum": ["supermarket", "pharmacy", "retail", "custom", "none"] },
+        "customBusinessType": { "type": "string", "maxLength": 100 },
+        "currency": { "type": "string", "minLength": 3, "maxLength": 6 },
+        "taxNumber": { "type": "string", "maxLength": 30 },
+        "commercialRegister": { "type": "string", "maxLength": 30 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "storeName", "businessType", "currency", "createdAt", "updatedAt"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Product catalog item with pricing and inventory metadata",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "storeId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "code": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "sku": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "barcode": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "category": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "purchasePrice": { "type": "number" },
+        "salePrice": { "type": "number" },
+        "wholesalePrice": { "type": "number" },
+        "minSalePrice": { "type": "number" },
+        "totalStock": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "inactive", "archived"] },
+        "isDeleted": { "type": "boolean" },
+        "revision": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "storeId", "code", "name", "barcode", "salePrice", "purchasePrice", "status", "isDeleted", "revision", "createdAt", "updatedAt"]
+    },
+    "SaleInvoice": {
+      "title": "SaleInvoice",
+      "description": "POS sale invoice, quotation, or sales order with idempotency protection",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "storeId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "invoiceNumber": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "docType": { "type": "string", "enum": ["invoice", "quotation", "sales_order"] },
+        "status": { "type": "string", "enum": ["completed", "held", "cancelled", "converted"] },
+        "customerId": { "type": "string", "maxLength": 128 },
+        "grandTotal": { "type": "number" },
+        "paidAmount": { "type": "number" },
+        "remainingAmount": { "type": "number" },
+        "idempotencyKey": { "type": "string", "minLength": 8, "maxLength": 128 },
+        "revision": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "storeId", "invoiceNumber", "docType", "status", "grandTotal", "paidAmount", "remainingAmount", "idempotencyKey", "revision", "createdAt", "updatedAt"]
+    },
+    "Customer": {
+      "title": "Customer",
+      "description": "Customer record with credit limit and balance",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "storeId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "balance": { "type": "number" },
+        "creditLimit": { "type": "number" },
+        "loyaltyPoints": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "storeId", "name", "balance", "creditLimit", "createdAt", "updatedAt"]
+    },
+    "Supplier": {
+      "title": "Supplier",
+      "description": "Supplier record with tax number and payables",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "storeId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "taxNumber": { "type": "string", "maxLength": 30 },
+        "balance": { "type": "number" },
+        "rating": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "storeId", "name", "balance", "rating", "createdAt", "updatedAt"]
+    },
+    "PurchaseInvoice": {
+      "title": "PurchaseInvoice",
+      "description": "Purchase invoice or purchase order",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "storeId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "purchaseNumber": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "docType": { "type": "string", "enum": ["invoice", "po", "quote"] },
+        "status": { "type": "string", "enum": ["received", "partial", "ordered", "cancelled"] },
+        "supplierId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "grandTotal": { "type": "number" },
+        "paidAmount": { "type": "number" },
+        "remainingAmount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "storeId", "purchaseNumber", "docType", "status", "supplierId", "grandTotal", "paidAmount", "remainingAmount", "createdAt", "updatedAt"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Operating expense record",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "storeId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "category": { "type": "string", "minLength": 1, "maxLength": 60 },
+        "amount": { "type": "number" },
+        "accountId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "storeId", "category", "amount", "accountId", "createdAt", "updatedAt"]
+    },
+    "Shift": {
+      "title": "Shift",
+      "description": "Cashier shift opening and closing balance record",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "storeId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "cashierId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "status": { "type": "string", "enum": ["open", "closed"] },
+        "openingCash": { "type": "number" },
+        "expectedCash": { "type": "number" },
+        "actualCash": { "type": "number" },
+        "variance": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "storeId", "cashierId", "status", "openingCash", "expectedCash", "createdAt", "updatedAt"]
+    },
+    "UserPrivateProfile": {
+      "title": "UserPrivateProfile",
+      "description": "PII-isolated private user profile",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "maxLength": 160 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "displayName", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/stores/{storeId}": {
+      "schema": { "$ref": "#/entities/Store" },
+      "description": "Store tenant root document"
+    },
+    "/stores/{storeId}/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Store product catalog"
+    },
+    "/stores/{storeId}/sales/{saleId}": {
+      "schema": { "$ref": "#/entities/SaleInvoice" },
+      "description": "Store sale invoices and quotations"
+    },
+    "/stores/{storeId}/customers/{customerId}": {
+      "schema": { "$ref": "#/entities/Customer" },
+      "description": "Store customer directory"
+    },
+    "/stores/{storeId}/suppliers/{supplierId}": {
+      "schema": { "$ref": "#/entities/Supplier" },
+      "description": "Store supplier directory"
+    },
+    "/stores/{storeId}/purchases/{purchaseId}": {
+      "schema": { "$ref": "#/entities/PurchaseInvoice" },
+      "description": "Store purchase invoices and orders"
+    },
+    "/stores/{storeId}/expenses/{expenseId}": {
+      "schema": { "$ref": "#/entities/Expense" },
+      "description": "Store operating expenses"
+    },
+    "/stores/{storeId}/shifts/{shiftId}": {
+      "schema": { "$ref": "#/entities/Shift" },
+      "description": "Store cashier shifts"
+    },
+    "/users/{userId}/private/{docId}": {
+      "schema": { "$ref": "#/entities/UserPrivateProfile" },
+      "description": "PII-isolated private user profile"
+    }
+  }
+}

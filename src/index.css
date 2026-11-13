@@ -1,0 +1,101 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --font-sans: 'IBM Plex Sans Arabic', 'Cairo', system-ui, sans-serif;
+    --font-display: 'Cairo', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  html {
+    font-family: var(--font-sans);
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media print {
+  @page {
+    margin: 6mm;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  body.printing-modal > *:not(.print-portal) {
+    display: none !important;
+  }
+
+  body.printing-modal .print-portal {
+    position: static !important;
+    inset: auto !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  body.printing-modal .print-portal-dialog {
+    position: static !important;
+    max-width: none !important;
+    width: 100% !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+
+  body.printing-modal .print-portal-scroll {
+    position: static !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+  }
+
+  body.printing-modal .print-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    margin: 0 auto !important;
+    padding: 4mm !important;
+  }
+
+  body.printing-modal .print-sheet[data-print-format='58mm'] {
+    width: 58mm !important;
+    max-width: 58mm !important;
+  }
+
+  body.printing-modal .print-sheet[data-print-format='80mm'] {
+    width: 80mm !important;
+    max-width: 80mm !important;
+  }
+
+  body.printing-modal .print-sheet[data-print-format='A4'] {
+    width: 100% !important;
+    max-width: 190mm !important;
+  }
+}
